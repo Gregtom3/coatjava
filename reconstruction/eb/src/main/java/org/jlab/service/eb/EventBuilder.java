@@ -466,8 +466,6 @@ public class EventBuilder {
         // Group DetectorResponses by their status
         for (DetectorResponse response : allResponses) {
             int status = response.getStatus();
-            System.out.println("    status=" + status + " , x y z = " + response.getPosition().x() + ", " 
-                               + response.getPosition().y() + ", " + response.getPosition().z());
             groupedResponses.computeIfAbsent(status, k -> new ArrayList<>()).add(response);
         }
     
