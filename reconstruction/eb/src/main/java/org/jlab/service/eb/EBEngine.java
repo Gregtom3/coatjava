@@ -51,6 +51,9 @@ public class EBEngine extends ReconstructionEngine {
     String covMatrixType    = null;
     String cvtTrackType     = null;
     String cvtTrajType      = null;
+    String ecalClustersType = "ECAL::clusters"; // default
+    String ecalMomentsType  = "ECAL::moments";  // default
+    String ecalCalibType  = "ECAL::calib";  // default
     
     public EBEngine(String name){
         super(name,"gavalian","1.0");
@@ -113,7 +116,7 @@ public class EBEngine extends ReconstructionEngine {
         EBRadioFrequency rf = new EBRadioFrequency(ccdb);
         eb.getEvent().getEventHeader().setRfTime(rf.getTime(de)+ccdb.getDouble(EBCCDBEnum.RF_OFFSET));
         
-        List<DetectorResponse> responseECAL = CalorimeterResponse.readHipoEvent(de, "ECAL::clusters", DetectorType.ECAL,"ECAL::moments", "ECAL::calib");
+        List<DetectorResponse> responseECAL = CalorimeterResponse.readHipoEvent(de, ecalClustersType, DetectorType.ECAL,ecalMomentsType, ecalCalibType);
         List<DetectorResponse> responseFTOF = ScintillatorResponse.readHipoEvent(de, ftofHitsType, DetectorType.FTOF);
         List<DetectorResponse> responseCTOF = ScintillatorResponse.readHipoEvent(de, "CTOF::clusters", DetectorType.CTOF);
         List<DetectorResponse> responseCND  = ScintillatorResponse.readHipoEvent(de, "CND::clusters", DetectorType.CND);
@@ -143,7 +146,11 @@ public class EBEngine extends ReconstructionEngine {
         eb.getPindexMap().put(1, ctracks.size());
         
         // Process tracks-hit matching:
-        eb.processHitMatching();
+        if(ecalClustersType=="ECAL::clusters"){
+            eb.processHitMatching();
+        }else{
+            eb.processHitMatching_OC();
+        }
 
         // Assign trigger/startTime particle: 
         eb.assignTrigger();
@@ -151,7 +158,11 @@ public class EBEngine extends ReconstructionEngine {
         // Make neutrals after assigning trigger particle, to get vertex/momentum right:
 
         // Create forward neutrals:
-        eb.processNeutralTracks();
+        if(ecalClustersType=="ECAL::clusters"){
+            eb.processNeutralTracks();
+        }else{
+            eb.processNeutralTracks_OC();
+        }
 
         // Create central neutrals:
         ebm.addCentralNeutrals(eb.getEvent());
@@ -324,6 +335,18 @@ public class EBEngine extends ReconstructionEngine {
         this.cvtTrajType = name;
     }
     
+    public void setEcalClustersType(String ecalClustersType) {
+        this.ecalClustersType = ecalClustersType;
+    }
+    
+    public void setEcalMomentsType(String ecalMomentsType) {
+        this.ecalMomentsType = ecalMomentsType;
+    }
+    
+    public void setEcalCalibType(String ecalCalibType) {
+        this.ecalCalibType = ecalCalibType;
+    }
+    
     @Override
     public boolean init() {
 
@@ -354,4 +377,15 @@ public class EBEngine extends ReconstructionEngine {
         return true;
     }
     
+    public String getEcalClustersType() {
+        return this.ecalClustersType;
+    }
+    
+    public String getEcalMomentsType() {
+        return this.ecalMomentsType;
+    }
+    
+    public String getEcalCalibType() {
+        return this.ecalCalibType;
+    }
 }

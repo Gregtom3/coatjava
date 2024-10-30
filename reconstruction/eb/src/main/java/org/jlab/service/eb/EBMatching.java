@@ -143,7 +143,7 @@ public class EBMatching {
 
         List<DetectorResponse> responsesECAL =
             eventBuilder.getUnmatchedResponses(null, DetectorType.ECAL, ecalLayer);
-
+        
         Vector3 vertex = new Vector3(0,0,0);
         if (eventBuilder.getEvent().getParticles().size()>0) {
             vertex.copy(eventBuilder.getEvent().getParticle(0).vertex());

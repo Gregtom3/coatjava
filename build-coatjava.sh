@@ -4,6 +4,14 @@ set -e
 set -u
 set -o pipefail
 
+# Define the base directory
+BASEDIR="/w/hallb-scshelf2102/clas12/users/gmat/clas12/coatjava_dev/coatjava/"
+
+# Find and delete all .ipynb_checkpoints directories under the base directory
+find "$BASEDIR" -type d -name ".ipynb_checkpoints" -exec rm -r {} + -print
+
+echo "All .ipynb_checkpoints directories under $BASEDIR have been deleted."
+
 usage='''build-coatjava.sh [-h] [--help] [--quiet] [--spotbugs] [--nomaps] [--unittests]
  - all other arguments will be passed to `mvn`, e.g., -T4 will build with 4 parallel threads'''
 

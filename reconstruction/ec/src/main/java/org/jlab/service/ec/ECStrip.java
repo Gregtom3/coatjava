@@ -49,6 +49,8 @@ public class ECStrip implements Comparable {
     private int             stripId = -1;   // Id (row number) of the peak striplist that this hit belongs to
     private int              peakID = -1;   // ID of peak this hit belongs to (all strips belonging to a peak have this same number)
     private int           clusterId = -1;   // Id (row number) of the cluster that this hit belongs to
+    private int                otid = -1;   // ID (row number) of the MC::Particle associated with the strip
+    private int                 pid = -1;   // PID of the MC::Particle associated with the strip
     
     private short            status = 0;
 	
@@ -100,7 +102,7 @@ public class ECStrip implements Comparable {
             return getRawEnergy()/getEcorr(edist);
         }
     }       
-
+    
     public class SimpleTWCTime extends TimeCorrection {    	
         public double getRawTime(){
            	return iTDC * iTimA1;
@@ -142,7 +144,8 @@ public class ECStrip implements Comparable {
           	return getPhaseCorrectedTime() - dgtw/radc - getExtendedTWC(radc) - iTim00;          	
         } 
         
-    	public double getTime() {    		
+    	public double getTime() {
+            double time = getTWCTime() - iTimA0;
           	return getTWCTime() - iTimA0;          	
         }  
     } 
@@ -293,8 +296,24 @@ public class ECStrip implements Comparable {
         return id;
     }
 
+    public int getPID(){
+        return pid;
+    }
+
+    public int getOTID(){
+        return otid;
+    }
+
     public void setStripID(int val){
         stripId = val;    
+    }
+
+    public void setOTID(int val){
+        otid = val;    
+    }
+
+    public void setPID(int val){
+        pid = val;    
     }
 
     public int getStripID(){
@@ -439,7 +458,7 @@ public class ECStrip implements Comparable {
         return ecc.getEcorr(dist);    	
     }
     
-    public double getTime(Point3D point) { 		
+    public double getTime(Point3D point) { 	
         tdist = point.distance(stripLine.end());
         time =  getTime() - tdist/getVeff();
         return time;

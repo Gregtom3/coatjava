@@ -16,6 +16,28 @@
        {"name":"time",       "type":"F",  "info":"Time of the hit"}
     ]
   },
+    {
+	"name": "ECAL::hits+",
+	"group": 20700,
+	"item" : 29,
+	"info": "ECAL hits+",
+	"entries": [
+	    {"name":"id",         "id":1,   "type":"S",  "info":"id of the hit"},
+	    {"name":"pid",        "id":2,   "type":"S",  "info":"pid of the MC particle that created the hit"},
+	    {"name":"otid",       "id":3,   "type":"S",  "info":"row of the MC particle that created the hit"},
+	    {"name":"sector",     "id":4,   "type":"B",  "info":"sector of ECAL"},
+	    {"name":"layer",      "id":5,   "type":"B",  "info":"Layer of ECAL (1-3:PCAL, 4-6:ECIN, 7-9:ECOUT"},
+	    {"name":"energy",     "id":6,   "type":"F",  "info":"Energy of the hit"},
+	    {"name":"time",       "id":7,   "type":"F",  "info":"Time of the hit"},
+	    {"name":"clusterId",  "id":8,   "type":"S",  "info":"id of the cluster the hit belongs to"},
+	    {"name":"xo",         "id":9,   "type":"F", "info":"strip origin X coordinate"},
+	    {"name":"yo",         "id":10,   "type":"F", "info":"strip origin Y coordinate"},
+	    {"name":"zo",         "id":11,   "type":"F", "info":"strip origin Z coordinate"},
+	    {"name":"xe",         "id":12,  "type":"F", "info":"strip end    X coordinate"},
+	    {"name":"ye",         "id":13,  "type":"F", "info":"strip end    Y coordinate"},
+	    {"name":"ze",         "id":14,  "type":"F", "info":"strip end    Z coordinate"}
+	]
+    },
   {
     "name": "ECAL::peaks",
     "group": 20700,

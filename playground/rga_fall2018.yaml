@@ -86,6 +86,5 @@ configuration:
       outputBankPrefix: "HB"
     RTPC:
       rtpcSimulation: "true"
-      
 mime-types:
   - binary/data-hipo

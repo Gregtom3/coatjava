@@ -35,11 +35,11 @@ public class ECEngine extends ReconstructionEngine {
         List<ECStrip>     ecStrips = ECCommon.initEC(de, this.getConstantsManager()); // thresholds, ADC/TDC match        
         List<ECPeak>       ecPeaks = ECCommon.processPeaks(ECCommon.createPeaks(ecStrips)); // thresholds, split peaks -> update peak-lines          
         List<ECCluster> ecClusters = new ArrayList<ECCluster>();  
-        
+
         List<ECCluster> tmpPCAL  = ECCommon.createClusters(ecPeaks,1);
         List<ECCluster> tmpECIN  = ECCommon.createClusters(ecPeaks,4);
         List<ECCluster> tmpECOUT = ECCommon.createClusters(ecPeaks,7);
-        
+
         // - Thsi is the part that identifies clusters with 2 views shared,
         // - and picks the one with best cluster size.
         
@@ -49,7 +49,6 @@ public class ECEngine extends ReconstructionEngine {
         ECPeakAnalysis.doClusterCleanup(tmpPCAL);
         ECPeakAnalysis.doClusterCleanup(tmpECIN);
         ECPeakAnalysis.doClusterCleanup(tmpECOUT);
-        
         
         // - commented by Gagik - now created clusters for each of sub-modules
         // - will be analyzed to eliminate clusters that share two views with 
@@ -140,7 +139,25 @@ public class ECEngine extends ReconstructionEngine {
             bankS.setFloat("energy",    h, (float) strips.get(h).getEnergy());
             bankS.setFloat("time",      h, (float) strips.get(h).getTime());                
         }
-       
+
+	DataBank bankTS = de.createBank("ECAL::hits+", strips.size());
+        for(int h = 0; h < strips.size(); h++){
+            bankTS.setByte("sector",     h,  (byte) strips.get(h).getDescriptor().getSector());
+            bankTS.setByte("layer",      h,  (byte) strips.get(h).getDescriptor().getLayer());
+	    bankTS.setShort("id",        h, (short) strips.get(h).getID());
+	    bankTS.setShort("otid",      h, (short) strips.get(h).getOTID());
+	    bankTS.setShort("pid",       h, (short) strips.get(h).getPID());
+	    bankTS.setFloat("energy",    h, (float) strips.get(h).getEnergy());
+	    bankTS.setFloat("time",      h, (float) strips.get(h).getTime());
+	    bankTS.setShort("clusterId", h, (short) strips.get(h).getClusterId());
+	    bankTS.setFloat("xo",     h, (float) strips.get(h).getLine().origin().x());
+	    bankTS.setFloat("yo",     h, (float) strips.get(h).getLine().origin().y());
+	    bankTS.setFloat("zo",     h, (float) strips.get(h).getLine().origin().z());
+	    bankTS.setFloat("xe",     h, (float) strips.get(h).getLine().end().x());
+	    bankTS.setFloat("ye",     h, (float) strips.get(h).getLine().end().y());
+	    bankTS.setFloat("ze",     h, (float) strips.get(h).getLine().end().z());
+        }
+	
         DataBank  bankP =  de.createBank("ECAL::peaks", peaks.size());
         for(int p = 0; p < peaks.size(); p++){
             bankP.setByte("sector",  p,  (byte) peaks.get(p).getDescriptor().getSector());
@@ -219,7 +236,7 @@ public class ECEngine extends ReconstructionEngine {
             bankD.setFloat("recFTW", c, (float) clusters.get(c).getFTime(2));              
         }
          
-        de.appendBanks(bankS,bankP,bankC,bankD,bankM);
+	 de.appendBanks(bankS,bankTS,bankP,bankC,bankD,bankM);
 
     }
     

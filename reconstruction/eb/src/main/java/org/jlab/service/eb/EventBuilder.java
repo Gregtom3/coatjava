@@ -107,6 +107,146 @@ public class EventBuilder {
         }
     }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Object Condensation Track-to-Hit matching
+// - OC clustering uses the 'status' variable to match PCAL, ECIN, ECOUT clusters to one another
+// - We define a new matching code to take care of this called `findMatchingHit_OC`
+// - When one cluster is associated to a track, we insist the other corresponding clusters are associated with it
+// - Ex: Track 5 is matched to a DetectorResponse with status==12. We match all other status==12 DetectorResponses to that cluster
+
+    /**
+     * processes all particles and associating detector responses with given cuts to each particle.
+     */
+    public void processHitMatching_OC(){
+        
+        int np = detectorEvent.getParticles().size();
+        for(int n = 0; n < np; n++){
+            DetectorParticle  p = this.detectorEvent.getParticle(n);
+            
+            // Matching tracks to detector responses, adding
+            // responses to the particle if reasonable match
+            // is found and set associations
+
+            // only match with FTOF/ECAL/HTCC/LTCC if it's a DC track:
+            if (p.getTrackDetectorID()==DetectorType.DC.getDetectorId()) {
+
+                // FTOF:
+                findMatchingHit(n,p,detectorResponses,DetectorType.FTOF, 1, ccdb.getDouble(EBCCDBEnum.FTOF_MATCHING_1A));
+                findMatchingHit(n,p,detectorResponses,DetectorType.FTOF, 2, ccdb.getDouble(EBCCDBEnum.FTOF_MATCHING_1B));
+                findMatchingHit(n,p,detectorResponses,DetectorType.FTOF, 3, ccdb.getDouble(EBCCDBEnum.FTOF_MATCHING_2));
+                
+                // ECAL:
+                findMatchingHit_OC(n,p,detectorResponses,DetectorType.ECAL, 1, ccdb.getDouble(EBCCDBEnum.PCAL_MATCHING));
+                findMatchingHit_OC(n,p,detectorResponses,DetectorType.ECAL, 4, ccdb.getDouble(EBCCDBEnum.ECIN_MATCHING));
+                findMatchingHit_OC(n,p,detectorResponses,DetectorType.ECAL, 7, ccdb.getDouble(EBCCDBEnum.ECOUT_MATCHING));
+
+                // LTCC:
+                int index = p.getCherenkovSignal(this.detectorResponses,DetectorType.LTCC);
+                if(index>=0){
+                    p.addResponse(detectorResponses.get(index));
+                    detectorResponses.get(index).setAssociation(n);
+                }
+            }
+
+            // only match with CTOF/CND if it's a central track:
+            else if (p.getTrackDetectorID()==DetectorType.CVT.getDetectorId()) {
+                findMatchingHit(n,p,detectorResponses,DetectorType.CTOF,1, ccdb.getDouble(EBCCDBEnum.CTOF_DZ));
+                findMatchingHit(n,p,detectorResponses,DetectorType.CND,1, this.cndMatcher );
+                findMatchingHit(n,p,detectorResponses,DetectorType.CND,2, this.cndMatcher );
+                findMatchingHit(n,p,detectorResponses,DetectorType.CND,3, this.cndMatcher );
+            }
+
+            // set dedx by combining trajectory information with hit energy:
+            p.setDedx();
+        }
+
+        // Special treatment for HTCC, with coarse resolution.
+        // Try all combos of HTCC clusters and particle to find best matches.
+        while (true) {
+            int bestPart=-1;
+            int bestRes=-1;
+            CherenkovResponse.TrackResidual bestTR=null;
+            for (int ires=0; ires<this.detectorResponses.size(); ires++) {
+                if (this.detectorResponses.get(ires).getDescriptor().getType() != DetectorType.HTCC) continue;
+                if (this.detectorResponses.get(ires).getAssociation()>=0) continue;
+                CherenkovResponse che=(CherenkovResponse)this.detectorResponses.get(ires);
+                int ipart = che.findClosestTrack(this.detectorEvent.getParticles());
+                if (ipart < 0) continue;
+                CherenkovResponse.TrackResidual tr = che.getTrackResidual(this.detectorEvent.getParticle(ipart));
+                if (bestTR==null || tr.compareTo(bestTR)<0) {
+                    bestPart = ipart;
+                    bestRes = ires;
+                    bestTR = tr;
+                }
+            }
+            if (bestTR==null) break;
+            this.detectorEvent.getParticle(bestPart).addResponse(this.detectorResponses.get(bestRes),true);
+            this.detectorResponses.get(bestRes).setAssociation(bestPart);
+        }
+    }
+
+
+    /**
+     * Find closest matching response of given detector type and layer within given distance.
+     * If found, associate it with the particle, and match all other responses with the same status.
+     *
+     * @param pindex the particle's index
+     * @param particle the particle
+     * @param responses all responses
+     * @param type detector type to find
+     * @param layer detector layer to find
+     * @param distance maximum distance between trajectory and hit
+     *
+     * @return whether a match was found
+     */
+    public boolean findMatchingHit_OC(
+            final int pindex, DetectorParticle particle, List<DetectorResponse> responses,
+            DetectorType type, final int layer, final double distance) {
+        
+        // Find the closest matching detector hit based on type, layer, and distance
+        int index = particle.getDetectorHit(responses, type, layer, distance);
+        
+        // If a matching hit is found
+        if (index >= 0) {
+            DetectorResponse matchedResponse = responses.get(index);
+            
+            // Check if the hit is already associated with another track
+            if (matchedResponse.getAssociation() >= 0) {
+                // Create a copy of the response for the current particle if shared
+                DetectorResponse copy = DetectorResponseFactory.create(matchedResponse);
+                copy.clearAssociations();
+                responses.add(copy);
+                index = responses.size() - 1;
+                matchedResponse = copy;  // Use the copy from here on
+            }
+    
+            // Associate the matched response with the particle
+            particle.addResponse(matchedResponse, true);
+            matchedResponse.addAssociation(pindex);
+            
+            // Get the status of the matched response
+            int status = matchedResponse.getStatus();
+            
+            // Now match all other responses with the same status
+            for (DetectorResponse response : responses) {
+                if (response.getStatus() == status && response.getAssociation() < 0) {
+                    // If another response with the same status is not yet associated, associate it
+                    particle.addResponse(response, true);
+                    response.addAssociation(pindex);
+                }
+            }
+    
+            return true;
+        }
+    
+        return false;
+    }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
     /**
      * processes all particles and associating detector responses with given cuts to each particle.
      */
@@ -315,8 +455,81 @@ public class EventBuilder {
 
 
     /*
-     * processNeutralTracks
+     * processNeutralTracks object condensation
      */
+
+    public void processNeutralTracks_OC() {
+        System.out.println("Event Begin (OC):");
+        List<DetectorResponse> allResponses = this.getUnmatchedResponses(null, DetectorType.ECAL, -1);
+        Map<Integer, List<DetectorResponse>> groupedResponses = new HashMap<>();
+        
+        // Group DetectorResponses by their status
+        for (DetectorResponse response : allResponses) {
+            int status = response.getStatus();
+            System.out.println("    status=" + status + " , x y z = " + response.getPosition().x() + ", " 
+                               + response.getPosition().y() + ", " + response.getPosition().z());
+            groupedResponses.computeIfAbsent(status, k -> new ArrayList<>()).add(response);
+        }
+    
+        List<DetectorParticle> particles = new ArrayList<>();
+        Vector3 vertex = new Vector3(0, 0, 0);
+        if (this.getEvent().getParticles().size() > 0) {
+            vertex.copy(this.getEvent().getParticle(0).vertex());
+        }
+    
+        // Create a DetectorParticle for each group of responses
+        for (Map.Entry<Integer, List<DetectorResponse>> entry : groupedResponses.entrySet()) {
+            List<DetectorResponse> responses = entry.getValue();
+    
+            // Combine responses into a single particle (neutral) for this status group
+            DetectorParticle particle = DetectorParticle.createNeutral(responses.get(0), vertex);
+            double totalEnergy = 0.0;
+            boolean hasPCAL = false; // To track if the particle has a PCAL response
+    
+            // Sum the energies of the combined responses and check for PCAL
+            for (DetectorResponse response : responses) {
+                particle.addResponse(response, true);
+                totalEnergy += response.getEnergy();
+                
+                // Check if the response comes from PCAL (layer 1)
+                if (response.getDescriptor().getLayer() == 1) {
+                    hasPCAL = true;
+                }
+            }
+    
+            // Update particle energy and momentum based on combined responses
+            final double visEnergy = particle.getEnergy(DetectorType.ECAL);
+            final double sampFract = SamplingFractions.getMean(22,particle,ccdb);
+            final double corEnergy = visEnergy / sampFract;
+
+            // direction cosines:
+            final double cx = particle.vector().x();
+            final double cy = particle.vector().y();
+            final double cz = particle.vector().z();
+            
+            particle.setCharge(0);
+            particle.vector().setXYZ(cx*corEnergy,cy*corEnergy,cz*corEnergy);
+    
+            // Assign particle type (PID)
+            if (!hasPCAL) {
+                // If the particle doesn't have a PCAL response, assign it as a neutron
+                particle.setPid(2112); // Neutron
+            } else {
+                // Otherwise, treat it as a photon
+                particle.setPid(22); // Photon
+            }
+    
+            particles.add(particle);
+        }
+    
+        // Add particles to detector event
+        for (DetectorParticle particle : particles) {
+            detectorEvent.addParticle(particle);
+        }
+    
+        detectorEvent.setAssociation();
+    }
+    
     public void processNeutralTracks() {
 
         EBMatching ebm=new EBMatching(this);

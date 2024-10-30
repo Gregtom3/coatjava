@@ -356,8 +356,22 @@ public class ECCommon {
         
         if(event.hasBank("ECAL::adc")==true){
             RawDataBank bank = new RawDataBank("ECAL::adc");
+	    
+	    // 8-19-2024
+	    // Loop through rows of MC::True to find the first row containing ECAL 'detector==7'
+	    DataBank tmp_true_bank =  event.getBank("MC::True");
+	    int ec_row = -1;
+	    for(int i = 0; i < tmp_true_bank.rows(); i++){
+		int detector = tmp_true_bank.getInt("detector", i);
+		if(detector == 7){
+		    ec_row = i;
+		    break;
+		}
+	    }
+	    // 8-19-2024
+	    // Load MC::Particle bank to get the MC pid
+	    DataBank tmp_mcpart_bank = event.getBank("MC::Particle");
             bank.read(event);
-            //DataBank bank = event.getBank("ECAL::adc");
             for(int i = 0; i < bank.rows(); i++){
                 int  is = bank.getByte("sector", i);
                 int  il = bank.getByte("layer", i); 
@@ -374,7 +388,13 @@ public class ECCommon {
                 strip.setADC(adc);
                 strip.setTriggerPhase(triggerPhase);
                 strip.setID(bank.trueIndex(i)+1);
-
+                // 8-19-2024
+                // Set the otid and pid of the strip
+                int otid = tmp_true_bank.getInt("otid",ec_row + bank.trueIndex(i));
+                int pid  = tmp_mcpart_bank.getInt("pid", otid - 1);
+                strip.setOTID(otid);
+                strip.setPID(pid);
+		
                 if(!isGoodStrip(strip)) continue;
                 
                 strips.add(strip); 

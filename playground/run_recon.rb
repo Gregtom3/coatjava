@@ -12,7 +12,8 @@ end
 # Define paths and constants
 playground_dir = './playground'
 input_file = "#{playground_dir}/neutron_gun.hipo"
-yaml_file = "#{playground_dir}/rga_fall_2018.yaml"
+#input_file = "#{playground_dir}/dis.hipo"
+yaml_file = "#{playground_dir}/rga_fall2018.yaml"
 output_base_dir = "#{playground_dir}/output"
 
 # Get the current date
@@ -36,7 +37,7 @@ cooked_file = "#{output_dir}/cooked.hipo"
 FileUtils.mkdir_p(output_dir)
 
 # Run the command
-command = "recon-util -i #{input_file} -o #{cooked_file} -y #{yaml_file}"
+command = "./playground/recon-util-new -i #{input_file} -o #{cooked_file} -y #{yaml_file} -n 5"
 puts "Running command: #{command}"
 system(command)
 

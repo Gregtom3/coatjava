@@ -177,6 +177,6 @@
     <column name = "recEV"       num = "8" type = "float64" info = "recon V peak energy"/>
     <column name = "recEW"       num = "9" type = "float64" info = "recon W peak energy"/>
   </section>
-  
+
 </bank>
 </evio_dictionary>
