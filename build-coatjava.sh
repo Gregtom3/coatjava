@@ -5,7 +5,7 @@ set -u
 set -o pipefail
 
 # Define the base directory
-BASEDIR="/w/hallb-scshelf2102/clas12/users/gmat/clas12/coatjava_dev/coatjava/"
+BASEDIR="coatjava/"
 
 # Find and delete all .ipynb_checkpoints directories under the base directory
 find "$BASEDIR" -type d -name ".ipynb_checkpoints" -exec rm -r {} + -print
